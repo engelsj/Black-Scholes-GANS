@@ -51,7 +51,7 @@ disc_step = tf.compat.v1.train.RMSPropOptimizer(learning_rate=0.001).minimize(di
 sess = tf.compat.v1.Session()
 tf.compat.v1.global_variables_initializer().run(session=sess)
 
-batch_size = 256
+batch_size = 252
 nd_steps = 10
 ng_steps = 10
 
@@ -76,7 +76,7 @@ for i in range(10001):
     if i % 10 == 0:
         f.write("%d,%f,%f\n" % (i, dloss, gloss))
 
-    if i % 1000 == 0:
+    if i % 2000 == 0:
         plt.figure()
         g_plot = sess.run(G_sample, feed_dict={Z: Z_batch})
         xax = plt.scatter(x_plot[:, 0], x_plot[:, 1])

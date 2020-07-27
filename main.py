@@ -43,6 +43,7 @@ def main():
     simulated_returns = np.log(1 + simulated_returns_data.astype(float).pct_change())
 
     actual_returns_data = msft.history(period="5y")['Close']
+    plt.scatter(actual_returns_data.keys(), actual_returns_data.values)
     actual_returns_data = np.log(1 + actual_returns_data.astype(float).pct_change())
 
 
