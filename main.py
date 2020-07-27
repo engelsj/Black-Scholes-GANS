@@ -1,7 +1,10 @@
 import math
 import numpy as np
 import numpy.random as npr
+import pandas as pd
+import yfinance as yf
 from pylab import plt, mpl
+
 plt.style.use('seaborn')
 mpl.rcParams['font.family'] = 'serif'
 npr.seed(100)
@@ -13,68 +16,45 @@ def generate_var_reduced_random(partitions, trials):
     return (sn - sn.mean()) / sn.std()
 
 
-def american_option_ols_monte_carlo_valuation(trials, partitions, time, S0, r, sigma, strike, option):
-    dt = time/partitions
-    df = np.exp(-r * dt)
-    # Simulate underlying
+def european_monte_carlo_valuation(trials, partitions, time, S0, r, sigma, strike, option):
+    dt = time / partitions
     S = np.zeros((partitions + 1, trials))
+    # Add more here
     S[0] = S0
     random_mesh = generate_var_reduced_random(partitions, trials)
     for t in range(1, partitions + 1):
-        S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt + sigma * math.sqrt(dt) * random_mesh[t])
-    # Payoff by option type - vectorized because option has a continuation or 0 value at each time step
+        S[t] = S[t - 1] * np.exp(
+            (r - 0.5 * sigma ** 2) * dt + sigma * math.sqrt(dt) * random_mesh[t])  # Run stochastic process
     if option == 'call':
-        h = np.maximum(S - strike, 0)
+        hT = np.maximum(S[-1] - strike, 0)
     if option == 'put':
-        h = np.maximum(strike - S, 0)
-    # Least-Squares Monte Carlo
-    V = np.copy(h)
-    for t in range(partitions -1, 0, -1): # 49, 48, … 1)
-        '''
-        Generate weights a sixth degree polynomial on x= underlying price y = risk-neutral option price 
-        at next time step
-        '''
-        reg = np.polyfit(S[t], V[t + 1] * df, 5)
-        C = np.polyval(reg, S[t]) # The continuation value is the evaluation of the OLS regression at time t
-        '''
-        If the continuation value is greater than the option value, take the continuation value of the next step.
-        Otherwise take the option value.
-        '''
-        V[t] = np.where(C > h[t], V[t +1] * df, h[t])
-    # Monte Carlo mean on risk-neutral option value of pathways
-    C0 = df * np.mean(V[1])
-    return C0, C, V, h # MC Mean, Continuation value paths, Option value paths, Option end distribution
-
-
-def generate_american_price_surface(strikes, option):
-    price_mean = []
-    for K in strikes:
-        mean_strike, continuation_value_paths, option_value_paths, option_distribution  =  american_option_ols_monte_carlo_valuation(
-            trials=100,
-            partitions=50,
-            time=1,
-            S0=100,
-            r=0.05,
-            sigma=0.1,
-            strike=K,
-            option=option)
-        price_mean.append(mean_strike)
-    return price_mean
+        hT = np.maximum(strike - S[-1], 0)
+    C0 = math.exp(-r * time) * np.mean(hT)  # Risk neutral mean of trials
+    return S, hT, C0
 
 
 def main():
-    strike_list = np.arange(80., 140.1, 5.)
-    put_surface = generate_american_price_surface(strike_list, 'put')
-    call_surface = generate_american_price_surface(strike_list, 'call')
-    straddle_surface = np.add(put_surface, call_surface)
-    plt.figure(figsize=(20, 12))
-    plt.plot(strike_list, straddle_surface, 'bo')
-    plt.title('Straddle Price by Strike')
-    plt.ylabel('Straddle Price')
-    plt.xlabel('Strike')
+    msft = yf.Ticker("MSFT")
+    euro_security_process, euro_trials, euro_price_mean = european_monte_carlo_valuation(trials=10000, partitions=50,
+                                                                                         time=1.0, S0=msft.info.get("previousClose"), r=0.05,
+                                                                                         sigma=0.64, strike=210, option='call')
+
+    simulated_returns_data = pd.DataFrame(euro_security_process[:, :200])
+    simulated_returns = np.log(1 + simulated_returns_data.astype(float).pct_change())
+
+    actual_returns_data = msft.history(period="5y")['Close']
+    actual_returns_data = np.log(1 + actual_returns_data.astype(float).pct_change())
+
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 12))
+    ax1.hist(simulated_returns.values.flatten(), bins=50)
+    ax1.set_xlabel('Theoretical Returns')
+    ax1.set_ylabel('Frequency')
+    ax2.hist(actual_returns_data, bins=50)
+    ax2.set_xlabel('Observed Returns')
+    ax2.set_ylabel('Frequency')
     plt.show()
 
 
 if __name__ == "__main__":
     main()
-
