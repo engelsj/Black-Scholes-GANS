@@ -42,10 +42,8 @@ def main():
     simulated_returns_data = pd.DataFrame(euro_security_process[:, :200])
     simulated_returns = np.log(1 + simulated_returns_data.astype(float).pct_change())
 
-    actual_returns_data = msft.history(period="5y")['Close']
-    plt.scatter(actual_returns_data.keys(), actual_returns_data.values)
+    actual_returns_data = msft.history(period="1y")['Close']
     actual_returns_data = np.log(1 + actual_returns_data.astype(float).pct_change())
-
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 12))
     ax1.hist(simulated_returns.values.flatten(), bins=50)
@@ -55,7 +53,6 @@ def main():
     ax2.set_xlabel('Observed Returns')
     ax2.set_ylabel('Frequency')
     plt.show()
-
 
 if __name__ == "__main__":
     main()

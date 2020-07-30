@@ -47,21 +47,20 @@ disc_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES,
 gen_step = tf.compat.v1.train.RMSPropOptimizer(learning_rate=0.001).minimize(gen_loss, var_list=gen_vars)  # G Train step
 disc_step = tf.compat.v1.train.RMSPropOptimizer(learning_rate=0.001).minimize(disc_loss, var_list=disc_vars)  # D Train step
 
-# sess = tf.Session(config=config)
 sess = tf.compat.v1.Session()
 tf.compat.v1.global_variables_initializer().run(session=sess)
 
-batch_size = 252
+batch_size = 254
 nd_steps = 10
 ng_steps = 10
 
-x_plot = sample_data(n=batch_size)
+x_plot = sample_data()
 
 f = open('loss_logs.csv', 'w')
 f.write('Iteration,Discriminator Loss,Generator Loss\n')
 
-for i in range(10001):
-    X_batch = sample_data(n=batch_size)
+for i in range(8001):
+    X_batch = sample_data()
     Z_batch = sample_Z(batch_size, 2)
 
     for _ in range(nd_steps):
@@ -69,14 +68,14 @@ for i in range(10001):
     rrep_dstep, grep_dstep = sess.run([r_rep, g_rep], feed_dict={X: X_batch, Z: Z_batch})
 
     for _ in range(ng_steps):
-        _, gloss = sess.run([gen_step, gen_loss], feed_dict={Z: Z_batch})
+        _,  gloss = sess.run([gen_step, gen_loss], feed_dict={Z: Z_batch})
 
     rrep_gstep, grep_gstep = sess.run([r_rep, g_rep], feed_dict={X: X_batch, Z: Z_batch})
 
     if i % 10 == 0:
         f.write("%d,%f,%f\n" % (i, dloss, gloss))
 
-    if i % 2000 == 0:
+    if i % 1000 == 0:
         plt.figure()
         g_plot = sess.run(G_sample, feed_dict={Z: Z_batch})
         xax = plt.scatter(x_plot[:, 0], x_plot[:, 1])
@@ -114,6 +113,14 @@ for i in range(10001):
         plt.title('Centroid of Transformed Features at Iteration %d' % i)
         plt.tight_layout()
         plt.savefig('plots/features/feature_transform_centroid_%d.png'%i)
+        plt.close()
+
+        plt.figure()
+        plt.title('Samples at Iteration %d' % i)
+        log_returns = pd.DataFrame(g_plot[:, 1])
+        log_returns = np.log(1 + log_returns.astype(float).pct_change())
+        hist = plt.hist(log_returns, bins=50)
+        plt.savefig('plots/iterations/hist_%d.png' % i)
         plt.close()
 
 f.close()
