@@ -116,10 +116,21 @@ for i in range(8001):
         plt.close()
 
         plt.figure()
-        plt.title('Samples at Iteration %d' % i)
-        log_returns = pd.DataFrame(g_plot[:, 1])
-        log_returns = np.log(1 + log_returns.astype(float).pct_change())
-        hist = plt.hist(log_returns, bins=50)
+        log_returns_simulated = pd.DataFrame(g_plot[:, 1])
+        log_returns_simulated = np.log(1 + log_returns_simulated.astype(float).pct_change())
+        log_returns_simulated = log_returns_simulated.dropna()
+
+        log_returns_actual = pd.DataFrame(X_batch[:, 1])
+        log_returns_actual = np.log(1 + log_returns_actual.astype(float).pct_change())
+        log_returns_actual = log_returns_actual.dropna()
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 12))
+        ax1.hist(log_returns_simulated.values, bins=50)
+        ax1.set_xlabel('Theoretical Returns')
+        ax1.set_ylabel('Frequency')
+        ax2.hist(log_returns_actual.values, bins=50)
+        ax2.set_xlabel('Observed Returns')
+        ax2.set_ylabel('Frequency')
         plt.savefig('plots/iterations/hist_%d.png' % i)
         plt.close()
 
